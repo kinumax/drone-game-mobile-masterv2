@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ドローン操縦ゲーム（モバイル対応版）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ドローン大冒険 - ランキング版</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
     <style>
         * {
             margin: 0;
@@ -17,11 +19,16 @@
             overflow: hidden;
             user-select: none;
             display: flex;
-            flex-direction: column; /* 垂直方向に並べる */
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            position: relative; /* UI要素を絶対配置するための基準 */
+            position: relative;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         #gameCanvas {
@@ -29,10 +36,11 @@
             border: 3px solid #FF69B4;
             border-radius: 15px;
             box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
-            background: white; /* Fallback, drawBackground will cover this */
-            max-width: 95vw; /* 画面幅の95%に制限 */
-            max-height: 80vh; /* 画面高さの80%に制限 (操作ボタン用スペースを確保) */
-            object-fit: contain; /* アスペクト比を維持して表示 */
+            background: white;
+            max-width: 95vw;
+            max-height: 80vh;
+            object-fit: contain;
+            touch-action: none;
         }
 
         #ui {
@@ -40,13 +48,13 @@
             top: 10px;
             left: 10px;
             color: white;
-            font-size: 14px; /* フォントサイズを小さく */
+            font-size: 14px;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             z-index: 10;
-            display: flex; /* 横並びにする */
-            flex-wrap: wrap; /* 折り返しを許可 */
-            gap: 8px; /* 要素間の隙間 */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         #controls {
@@ -54,32 +62,33 @@
             bottom: 10px;
             width: 100%;
             display: flex;
-            justify-content: space-around; /* 左右のジョイスティックを均等に配置 */
+            justify-content: space-around;
             align-items: center;
             z-index: 10;
             padding: 0 10px;
             box-sizing: border-box;
+            display: none;
         }
 
         .joystick-area {
             background: rgba(0, 0, 0, 0.3);
             border-radius: 50%;
-            width: 120px; /* ジョイスティックの領域サイズ */
+            width: 120px;
             height: 120px;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
-            touch-action: none; /* タッチスクロールを無効にする */
+            touch-action: none;
         }
 
         .joystick {
             background: rgba(255, 255, 255, 0.6);
             border-radius: 50%;
-            width: 50px; /* ジョイスティックのつまみサイズ */
+            width: 50px;
             height: 50px;
             position: absolute;
-            transform: translate(-50%, -50%); /* 中央に配置 */
+            transform: translate(-50%, -50%);
         }
 
         #attackButton {
@@ -87,22 +96,17 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 80px; /* 攻撃ボタンのサイズ */
+            width: 80px;
             height: 80px;
             font-size: 20px;
             font-weight: bold;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
             user-select: none;
-            -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効にする */
-        }
-
-
-        .heart {
-            color: #FF69B4;
-            font-size: 20px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         #startScreen {
@@ -117,13 +121,47 @@
             justify-content: center;
             align-items: center;
             color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            z-index: 20; /* Ensure start screen is on top */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 20;
         }
 
-        #startButton {
+        #rankingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #4B0082, #FF69B4);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 25;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            z-index: 30;
+        }
+
+        .screen-button {
             padding: 15px 30px;
-            font-size: 24px;
+            font-size: 20px;
             background: linear-gradient(45deg, #FF1493, #FF69B4);
             color: white;
             border: none;
@@ -131,13 +169,94 @@
             cursor: pointer;
             font-family: inherit;
             font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s;
             -webkit-tap-highlight-color: transparent;
+            margin: 10px;
+            touch-action: manipulation;
         }
 
-        #startButton:hover {
+        .screen-button:hover,
+        .screen-button:active {
             transform: scale(1.1);
+        }
+
+        .ranking-table {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .ranking-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 5px;
+        }
+
+        .ranking-row.top3 {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #000;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .wallet-input {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .qr-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+        }
+
+        .qr-content {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            text-align: center;
+            color: #000;
+        }
+
+        .boss-health-bar {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: rgba(255, 0, 0, 0.3);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            display: none;
+            z-index: 15;
+        }
+
+        .boss-health-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #FF0000, #FF6666);
+            border-radius: 8px;
+            transition: width 0.3s ease;
         }
 
         .emoji {
@@ -146,12 +265,43 @@
         }
 
         @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-10px);
+            }
+
+            60% {
+                transform: translateY(-5px);
+            }
         }
 
-        /* Small screen adjustments */
+        .success-message {
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .error-message {
+            background: #f44336;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        /* Android向け最適化 */
         @media (max-width: 600px) {
             #ui {
                 font-size: 12px;
@@ -159,40 +309,139 @@
                 left: 5px;
                 gap: 5px;
             }
+
             #controls {
                 bottom: 5px;
             }
+
             .joystick-area {
                 width: 100px;
                 height: 100px;
             }
+
             .joystick {
                 width: 40px;
                 height: 40px;
             }
+
             #attackButton {
                 width: 70px;
                 height: 70px;
                 font-size: 18px;
             }
+
+            .screen-button {
+                font-size: 18px;
+                padding: 12px 24px;
+            }
+        }
+
+        /* 小型スマートフォン向け追加最適化 */
+        @media (max-width: 360px) {
+            .joystick-area {
+                width: 80px;
+                height: 80px;
+            }
+
+            .joystick {
+                width: 30px;
+                height: 30px;
+            }
+
+            #attackButton {
+                width: 60px;
+                height: 60px;
+                font-size: 16px;
+            }
+        }
+
+        /* 横向き最適化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            #controls {
+                bottom: 0;
+            }
+
+            .joystick-area {
+                width: 80px;
+                height: 80px;
+            }
+
+            #attackButton {
+                width: 60px;
+                height: 60px;
+            }
+
+            #gameCanvas {
+                max-height: 70vh;
+            }
+        }
+
+        /* QRコード表示の最適化 */
+        .qr-content {
+            max-width: 90%;
+            padding: 15px;
+        }
+
+        #qrCode img {
+            max-width: 100%;
+            height: auto;
         }
     </style>
 </head>
+
 <body>
     <div id="startScreen">
         <h1 style="font-size: 48px; margin-bottom: 20px;">🚁 ドローン大冒険 🚁</h1>
         <p style="font-size: 24px; margin-bottom: 30px;">仲間と一緒に空の旅に出よう！</p>
         <div class="emoji">✨🌟💫⭐</div>
-        <button id="startButton" style="margin-top: 30px;">ゲームスタート！</button>
+        <button id="startButton" class="screen-button" style="margin-top: 30px;">ゲームスタート！</button>
+        <button id="showRankingButton" class="screen-button">ランキング表示</button>
+    </div>
+
+    <div id="rankingScreen">
+        <h2 style="font-size: 36px; margin-bottom: 20px;">🏆 ランキング 🏆</h2>
+        <div class="ranking-table" id="rankingTable">
+            <div style="text-align: center; padding: 20px;">ランキングを読み込み中...</div>
+        </div>
+        <button id="backToMenuButton" class="screen-button">メニューに戻る</button>
+    </div>
+
+    <div id="gameOverScreen">
+        <h2 style="font-size: 36px; margin-bottom: 20px;">ゲームオーバー</h2>
+        <div id="finalScore" style="font-size: 24px; margin-bottom: 20px;"></div>
+        <div id="finalLevel" style="font-size: 20px; margin-bottom: 30px;"></div>
+        <input type="text" id="playerNameInput" class="wallet-input" placeholder="プレイヤー名を入力" maxlength="20">
+        <input type="text" id="walletInput" class="wallet-input" placeholder="XAMAN Wallet アドレス (上位3位のみ)"
+            style="display: none;">
+        <div id="walletError" class="error-message">無効なウォレットアドレスです</div>
+        <div id="scoreSuccess" class="success-message">スコアが正常に登録されました！</div>
+        <button id="submitScoreButton" class="screen-button">スコアを登録</button>
+        <button id="restartButton" class="screen-button">もう一度プレイ</button>
+        <button id="backToMenuFromGameOver" class="screen-button">メニューに戻る</button>
+    </div>
+
+    <div class="qr-modal" id="qrModal">
+        <div class="qr-content">
+            <h3>XRP受取用QRコード</h3>
+            <div id="qrCode"></div>
+            <p id="walletAddress"></p>
+            <p id="qrInstructions">XAMANウォレットでスキャンしてXRPを送信できます</p>
+            <button class="screen-button" onclick="closeQRModal()">閉じる</button>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
-    
+
     <div id="ui">
         <div>❤️ HP: <span id="hp">100</span></div>
         <div>⭐ スコア: <span id="score">0</span></div>
         <div>👥 仲間: <span id="allies">0</span></div>
         <div>🏆 レベル: <span id="level">1</span></div>
+        <div id="stageDisplay">🌅 ステージ: <span id="stage">1</span></div>
+    </div>
+
+    <div class="boss-health-bar" id="bossHealthBar">
+        <div class="boss-health-fill" id="bossHealthFill"></div>
     </div>
 
     <div id="controls">
@@ -205,873 +454,422 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const startScreen = document.getElementById('startScreen');
-        const startButton = document.getElementById('startButton');
-        const leftJoystickArea = document.getElementById('leftJoystickArea');
-        const leftJoystick = document.getElementById('leftJoystick');
-        const rightJoystickArea = document.getElementById('rightJoystickArea');
-        const rightJoystick = document.getElementById('rightJoystick');
-        const attackButton = document.getElementById('attackButton');
-
-        // キャンバスサイズをレスポンシブに調整
-        function resizeCanvas() {
-            canvas.width = window.innerWidth * 0.95; // 画面幅の95%
-            canvas.height = window.innerHeight * 0.7; // 画面高さの70% (操作ボタンに20-30%確保)
-            // 最小サイズを設定して、極端に小さくならないようにする
-            canvas.width = Math.max(canvas.width, 320);
-            canvas.height = Math.max(canvas.height, 240);
-            
-            // プレイヤー位置を再調整（キャンバスサイズ変更後に必要）
-            if (gameState.running) {
-                 player.x = Math.min(player.x, canvas.width - player.size / 2);
-                 player.y = Math.min(player.y, canvas.height - player.size / 2);
-                 player.x = Math.max(player.x, player.size / 2);
-                 player.y = Math.max(player.y, player.size / 2);
-            } else {
-                player.x = canvas.width / 2;
-                player.y = canvas.height / 2;
-            }
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas(); // 初期ロード時にもサイズ調整
-
-        // ゲーム状態
-        let gameState = {
-            running: false,
-            score: 0,
-            hp: 100,
-            allies: 0,
-            level: 1,
-            backgroundOffset: 0
-        };
-
-        // プレイヤー
-        let player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            size: 25,
-            speed: 5,
-            color: '#FF69B4'
-        };
-
-        // ゲームオブジェクト配列
+        // ゲーム変数
+        let gameState = 'start';
+        let canvas, ctx;
+        let player = { x: 400, y: 300, width: 40, height: 40, hp: 100, maxHp: 100 };
+        let score = 0;
+        let level = 1;
+        let stage = 1;
+        let allies = [];
         let enemies = [];
         let bullets = [];
-        let collectibles = [];
-        let allyDrones = [];
+        let enemyBullets = [];
         let particles = [];
-
-        // 背景要素
-        let clouds = [];
-        let mountains = [];
-        let buildings = [];
-
-        // 入力管理（キーボードとタッチの両方に対応）
+        let gameRunning = false;
         let keys = {};
-        let touchInput = {
-            left: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0, dx: 0, dy: 0 },
-            right: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0, dx: 0, dy: 0 }
-        };
+        let boss = null;
+        let bossSpawned = false;
 
-        // イベントリスナー
-        document.addEventListener('keydown', (e) => {
-            keys[e.key.toLowerCase()] = true;
-            if (e.key === ' ' || e.code === 'Space') {
-                e.preventDefault();
-                if (gameState.running) shootBullet();
-            }
-        });
+        // ランキングデータ（実際の実装では外部APIを使用）
+        let rankings = [];
 
-        document.addEventListener('keyup', (e) => {
-            keys[e.key.toLowerCase()] = false;
-        });
-
-        startButton.addEventListener('click', startGame);
-
-        // タッチ操作イベントリスナー
-        leftJoystickArea.addEventListener('touchstart', handleJoystickStart);
-        leftJoystickArea.addEventListener('touchmove', handleJoystickMove);
-        leftJoystickArea.addEventListener('touchend', handleJoystickEnd);
-        leftJoystickArea.addEventListener('touchcancel', handleJoystickEnd);
-
-        rightJoystickArea.addEventListener('touchstart', handleJoystickStart);
-        rightJoystickArea.addEventListener('touchmove', handleJoystickMove);
-        rightJoystickArea.addEventListener('touchend', handleJoystickEnd);
-        rightJoystickArea.addEventListener('touchcancel', handleJoystickEnd);
-
-        attackButton.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // デフォルトの動作（スクロールなど）を防止
-            if (gameState.running) shootBullet();
-            attackButton.style.transform = 'scale(0.9)'; // 押下時のフィードバック
-        });
-        attackButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            attackButton.style.transform = 'scale(1)';
-        });
-
-
-        function handleJoystickStart(e) {
-            e.preventDefault(); // スクロールなどを防止
-            const touch = e.changedTouches[0];
-            const targetArea = e.currentTarget;
-            const rect = targetArea.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-
-            if (targetArea.id === 'leftJoystickArea') {
-                touchInput.left.active = true;
-                touchInput.left.startX = touch.clientX;
-                touchInput.left.startY = touch.clientY;
-                touchInput.left.currentX = touch.clientX;
-                touchInput.left.currentY = touch.clientY;
-                leftJoystick.style.left = (touch.clientX - rect.left) + 'px';
-                leftJoystick.style.top = (touch.clientY - rect.top) + 'px';
-            } else if (targetArea.id === 'rightJoystickArea') {
-                touchInput.right.active = true;
-                touchInput.right.startX = touch.clientX;
-                touchInput.right.startY = touch.clientY;
-                touchInput.right.currentX = touch.clientX;
-                touchInput.right.currentY = touch.clientY;
-                rightJoystick.style.left = (touch.clientX - rect.left) + 'px';
-                rightJoystick.style.top = (touch.clientY - rect.top) + 'px';
-            }
+        // ウォレットアドレス検証関数
+        function isValidXRPAddress(address) {
+            // XRPアドレスの基本的な検証パターン
+            const xrpPattern = /^r[1-9A-HJ-NP-Za-km-z]{25,34}$/;
+            const classicPattern = /^[1-9A-HJ-NP-Za-km-z]{25,34}$/;
+            return xrpPattern.test(address) || classicPattern.test(address);
         }
 
-        function handleJoystickMove(e) {
-            e.preventDefault(); // スクロールなどを防止
-            const touch = e.changedTouches[0];
-            const targetArea = e.currentTarget;
-            const rect = targetArea.getBoundingClientRect();
-            const radius = rect.width / 2;
+        // ランキング管理
+        class RankingManager {
+            constructor() {
+                this.loadRankings();
+            }
 
-            let inputObj = (targetArea.id === 'leftJoystickArea') ? touchInput.left : touchInput.right;
-            let joystickElement = (targetArea.id === 'leftJoystickArea') ? leftJoystick : rightJoystick;
+            loadRankings() {
+                const saved = localStorage.getItem('droneGameRankings');
+                if (saved) {
+                    try {
+                        rankings = JSON.parse(saved);
+                    } catch (e) {
+                        rankings = [];
+                    }
+                } else {
+                    // デモデータ
+                    rankings = [
+                        { name: "ドローンマスター", score: 15000, level: 8, wallet: "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH" },
+                        { name: "スカイハンター", score: 12500, level: 7, wallet: "rLNaPoKeeBjZe2sDQVDPyOMpLS64Hhh7x" },
+                        { name: "エースパイロット", score: 10000, level: 6, wallet: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh" }
+                    ];
+                }
+                this.sortRankings();
+            }
 
-            if (inputObj.active) {
-                let dx = touch.clientX - inputObj.startX;
-                let dy = touch.clientY - inputObj.startY;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+            saveRankings() {
+                try {
+                    localStorage.setItem('droneGameRankings', JSON.stringify(rankings));
+                } catch (e) {
+                    console.error('Failed to save rankings:', e);
+                }
+            }
 
-                if (dist > radius) {
-                    dx = (dx / dist) * radius;
-                    dy = (dy / dist) * radius;
+            addScore(name, score, level, wallet = '') {
+                if (!name || name.trim() === '') {
+                    throw new Error('プレイヤー名を入力してください');
                 }
 
-                inputObj.dx = dx;
-                inputObj.dy = dy;
+                const newEntry = {
+                    name: name.trim(),
+                    score: score,
+                    level: level,
+                    wallet: wallet.trim(),
+                    timestamp: Date.now()
+                };
 
-                joystickElement.style.left = (radius + dx) + 'px';
-                joystickElement.style.top = (radius + dy) + 'px';
+                // 上位3位に入る場合のウォレット検証
+                const tempRankings = [...rankings, newEntry].sort((a, b) => b.score - a.score);
+                const rank = tempRankings.findIndex(entry => entry === newEntry) + 1;
+
+                if (rank <= 3 && wallet && !isValidXRPAddress(wallet)) {
+                    throw new Error('無効なXRPウォレットアドレスです');
+                }
+
+                rankings.push(newEntry);
+                this.sortRankings();
+                this.saveRankings();
+
+                return rank;
+            }
+
+            sortRankings() {
+                rankings.sort((a, b) => b.score - a.score);
+                rankings = rankings.slice(0, 20); // 上位20位まで保持
+            }
+
+            getRankings() {
+                return rankings;
             }
         }
 
-        function handleJoystickEnd(e) {
-            e.preventDefault();
-            const targetArea = e.currentTarget;
+        const rankingManager = new RankingManager();
 
-            let inputObj = (targetArea.id === 'leftJoystickArea') ? touchInput.left : touchInput.right;
-            let joystickElement = (targetArea.id === 'leftJoystickArea') ? leftJoystick : rightJoystick;
+        // 初期化
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
 
-            inputObj.active = false;
-            inputObj.dx = 0;
-            inputObj.dy = 0;
-            joystickElement.style.left = '50%';
-            joystickElement.style.top = '50%';
+            // キャンバスサイズ設定
+            canvas.width = 800;
+            canvas.height = 600;
+
+            // イベントリスナー設定
+            setupEventListeners();
+
+            // ゲームループ開始
+            gameLoop();
+
+            // ランキング表示
+            displayRankings();
         }
 
+        function setupEventListeners() {
+            // スタートボタン
+            document.getElementById('startButton').addEventListener('click', startGame);
+
+            // ランキング表示ボタン
+            document.getElementById('showRankingButton').addEventListener('click', showRankingScreen);
+
+            // メニュー戻るボタン
+            document.getElementById('backToMenuButton').addEventListener('click', showStartScreen);
+            document.getElementById('backToMenuFromGameOver').addEventListener('click', showStartScreen);
+
+            // リスタートボタン
+            document.getElementById('restartButton').addEventListener('click', restartGame);
+
+            // スコア登録ボタン
+            document.getElementById('submitScoreButton').addEventListener('click', submitScore);
+
+            // キーボードイベント
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    if (gameRunning) shoot();
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+            });
+
+            // プレイヤー名入力でウォレット入力表示切り替え
+            document.getElementById('playerNameInput').addEventListener('input', function () {
+                const walletInput = document.getElementById('walletInput');
+                if (this.value.trim()) {
+                    // 現在のスコアが上位3位に入るかチェック
+                    const tempRankings = [...rankings, { score: score }].sort((a, b) => b.score - a.score);
+                    const potentialRank = tempRankings.findIndex(entry => entry.score === score) + 1;
+
+                    if (potentialRank <= 3) {
+                        walletInput.style.display = 'block';
+                    } else {
+                        walletInput.style.display = 'none';
+                    }
+                } else {
+                    walletInput.style.display = 'none';
+                }
+            });
+        }
 
         function startGame() {
-            startScreen.style.display = 'none';
-            gameState.running = true;
-            gameState.hp = 100;
-            gameState.score = 0;
-            gameState.allies = 0;
-            gameState.level = 1;
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            initializeGame();
-            if (!gameLoopRequestId) {
-                gameLoop();
-            }
-            // モバイル操作UIを表示
+            gameState = 'playing';
+            gameRunning = true;
+            document.getElementById('startScreen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
-        }
-        
-        let gameLoopRequestId;
 
-        function initializeGame() {
-            initializeClouds();
-            initializeMountains();
-            initializeBuildings();
-            
+            // ゲーム初期化
+            resetGame();
+        }
+
+        function resetGame() {
+            player = { x: 400, y: 300, width: 40, height: 40, hp: 100, maxHp: 100 };
+            score = 0;
+            level = 1;
+            stage = 1;
+            allies = [];
             enemies = [];
             bullets = [];
-            collectibles = [];
-            allyDrones = [];
+            enemyBullets = [];
             particles = [];
-            
-            spawnInitialObjects();
+            boss = null;
+            bossSpawned = false;
+
+            updateUI();
+            spawnInitialEnemies();
         }
 
-        function initializeClouds() {
-            clouds = [];
-            for (let i = 0; i < 8; i++) {
-                clouds.push({
-                    x: Math.random() * canvas.width * 1.5,
-                    y: Math.random() * (canvas.height * 0.4) + 20,
-                    size: Math.random() * 40 + 30,
-                    speed: Math.random() * 0.5 + 0.2
-                });
-            }
-        }
-
-        function initializeMountains() {
-            mountains = [];
-            let currentX = -50;
-            for (let i = 0; i < 6; i++) {
-                const width = Math.random() * 150 + 100;
-                mountains.push({
-                    x: currentX,
-                    y: canvas.height - (Math.random() * 150 + 120),
-                    width: width,
-                    height: Math.random() * 150 + 120
-                });
-                currentX += width * (Math.random() * 0.5 + 0.5);
-            }
-        }
-        
-        function initializeBuildings() {
-            buildings = [];
-            let currentX = 0;
-            for (let i = 0; i < 10; i++) {
-                const width = Math.random() * 40 + 30;
-                const height = Math.random() * 100 + 50;
-                buildings.push({
-                    x: currentX + Math.random() * 20,
-                    y: canvas.height - height,
-                    width: width,
-                    height: height
-                });
-                currentX += width + 10;
-                if (currentX > canvas.width) break;
-            }
-        }
-
-        function spawnInitialObjects() {
+        function spawnInitialEnemies() {
             for (let i = 0; i < 3; i++) {
                 spawnEnemy();
-            }
-            for (let i = 0; i < 5; i++) {
-                spawnCollectible();
-            }
-            for (let i = 0; i < 2; i++) {
-                spawnAllyCandidate();
             }
         }
 
         function spawnEnemy() {
             enemies.push({
                 x: Math.random() * canvas.width,
-                y: Math.random() * (canvas.height * 0.5),
-                size: 20,
-                speed: Math.random() * 1.5 + 1,
-                hp: 2,
-                color: '#FF4444',
-                type: Math.random() > 0.5 ? 'chaser' : 'patrol',
-                angle: Math.random() * Math.PI * 2,
-                lastShot: Date.now() + Math.random() * 2000
+                y: Math.random() * 100,
+                width: 30,
+                height: 30,
+                hp: 50,
+                maxHp: 50,
+                speed: 1 + Math.random() * 2,
+                shootTimer: 0
             });
         }
 
-        function spawnCollectible() {
-            collectibles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * (canvas.height - 50) + 25,
-                size: 15,
-                type: Math.random() > 0.3 ? 'star' : 'heart',
-                bounce: Math.random() * Math.PI * 2,
-                collected: false
+        function spawnAlly() {
+            allies.push({
+                x: player.x + (Math.random() - 0.5) * 100,
+                y: player.y + (Math.random() - 0.5) * 100,
+                width: 25,
+                height: 25,
+                speed: 2,
+                shootTimer: 0
             });
         }
 
-        function spawnAllyCandidate() {
-            collectibles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * (canvas.height - 50) + 25,
-                size: 20,
-                type: 'ally',
-                bounce: Math.random() * Math.PI * 2,
-                collected: false
-            });
-        }
-        
-        function shootBullet() {
+        function shoot() {
             bullets.push({
-                x: player.x,
-                y: player.y - player.size * 0.6,
-                size: 6,
+                x: player.x + player.width / 2,
+                y: player.y,
+                width: 4,
+                height: 10,
                 speed: 8,
-                color: '#FFD700',
-                type: 'player'
-            });
-        }
-
-        function updatePlayer() {
-            // キーボード操作
-            if (keys['w'] || keys['arrowup']) player.y = Math.max(player.size / 2, player.y - player.speed);
-            if (keys['s'] || keys['arrowdown']) player.y = Math.min(canvas.height - player.size / 2, player.y + player.speed);
-            if (keys['a'] || keys['arrowleft']) player.x = Math.max(player.size / 2, player.x - player.speed);
-            if (keys['d'] || keys['arrowright']) player.x = Math.min(canvas.width - player.size / 2, player.x + player.speed);
-
-            // ジョイスティック操作
-            if (touchInput.left.active) {
-                const moveSpeed = player.speed * 0.8; // タッチ操作の移動速度を調整
-                player.x += (touchInput.left.dx / 60) * moveSpeed; // 60はジョイスティック領域の半径の目安
-                player.y += (touchInput.left.dy / 60) * moveSpeed;
-            }
-
-            // 画面外に出ないように制限
-            player.x = Math.max(player.size / 2, Math.min(canvas.width - player.size / 2, player.x));
-            player.y = Math.max(player.size / 2, Math.min(canvas.height - player.size / 2, player.y));
-        }
-
-        function updateEnemies() {
-            enemies.forEach((enemy, index) => {
-                if (enemy.type === 'chaser') {
-                    const dx = player.x - enemy.x;
-                    const dy = player.y - enemy.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist > 0) {
-                        enemy.x += (dx / dist) * enemy.speed * 0.7;
-                        enemy.y += (dy / dist) * enemy.speed * 0.7;
-                    }
-                } else {
-                    enemy.x += Math.cos(enemy.angle) * enemy.speed;
-                    enemy.y += Math.sin(enemy.angle) * enemy.speed;
-                    
-                    if (enemy.x < enemy.size || enemy.x > canvas.width - enemy.size) enemy.angle = Math.PI - enemy.angle;
-                    if (enemy.y < enemy.size || enemy.y > canvas.height - enemy.size - 100) enemy.angle = -enemy.angle;
-                    enemy.x = Math.max(enemy.size, Math.min(canvas.width - enemy.size, enemy.x));
-                    enemy.y = Math.max(enemy.size, Math.min(canvas.height - enemy.size, enemy.y));
-                }
-
-                if (Date.now() - enemy.lastShot > (2000 + (Math.random() * 1000))) {
-                    const dx = player.x - enemy.x;
-                    const dy = player.y - enemy.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 300 && dist > 0) {
-                        bullets.push({
-                            x: enemy.x,
-                            y: enemy.y,
-                            size: 5,
-                            speed: 4,
-                            vx: (dx / dist) * 4,
-                            vy: (dy / dist) * 4,
-                            color: '#FF6666',
-                            type: 'enemy'
-                        });
-                        enemy.lastShot = Date.now();
-                    }
-                }
-
-                const dxPlayer = player.x - enemy.x;
-                const dyPlayer = player.y - enemy.y;
-                const distPlayer = Math.sqrt(dxPlayer * dxPlayer + dyPlayer * dyPlayer);
-                if (distPlayer < player.size / 2 + enemy.size / 2) {
-                    gameState.hp -= 10;
-                    createParticles(enemy.x, enemy.y, '#FF4444', 10);
-                    enemies.splice(index, 1);
-                    spawnEnemy();
-                    if (gameState.hp <= 0) gameOver();
-                }
-            });
-        }
-
-        function updateBullets() {
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                const bullet = bullets[i];
-                if (bullet.type === 'player' || bullet.type === 'ally') {
-                    if (bullet.type === 'player'){
-                        bullet.y -= bullet.speed;
-                    } else {
-                        bullet.x += bullet.vx;
-                        bullet.y += bullet.vy;
-                    }
-                    
-                    for (let j = enemies.length - 1; j >= 0; j--) {
-                        const enemy = enemies[j];
-                        const dx = bullet.x - enemy.x;
-                        const dy = bullet.y - enemy.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < bullet.size / 2 + enemy.size / 2) {
-                            enemy.hp--;
-                            createParticles(bullet.x, bullet.y, '#FFD700', 5);
-                            bullets.splice(i, 1);
-                            
-                            if (enemy.hp <= 0) {
-                                gameState.score += 100;
-                                createParticles(enemy.x, enemy.y, enemy.color, 15);
-                                enemies.splice(j, 1);
-                                spawnEnemy();
-                                if (Math.random() < 0.2) spawnCollectible();
-                            }
-                            break;
-                        }
-                    }
-                } else {
-                    bullet.x += bullet.vx;
-                    bullet.y += bullet.vy;
-                    
-                    const dx = bullet.x - player.x;
-                    const dy = bullet.y - player.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < bullet.size / 2 + player.size / 2) {
-                        gameState.hp -= 5;
-                        createParticles(bullet.x, bullet.y, '#FF69B4', 10);
-                        bullets.splice(i, 1);
-                        if (gameState.hp <= 0) gameOver();
-                        break;
-                    }
-                }
-
-                if (bullets[i] && (bullet.y < -bullet.size || bullet.y > canvas.height + bullet.size || bullet.x < -bullet.size || bullet.x > canvas.width + bullet.size)) {
-                    bullets.splice(i, 1);
-                }
-            }
-        }
-        
-        function updateCollectibles() {
-            for (let i = collectibles.length - 1; i >= 0; i--) {
-                const item = collectibles[i];
-                item.bounce += 0.05;
-                
-                const dx = player.x - item.x;
-                const dy = player.y - item.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                
-                if (dist < player.size / 2 + item.size / 2 && !item.collected) {
-                    item.collected = true;
-                    let particleColor = '#FFFFFF';
-                    if (item.type === 'star') {
-                        gameState.score += 50;
-                        particleColor = '#FFD700';
-                    } else if (item.type === 'heart') {
-                        gameState.hp = Math.min(100, gameState.hp + 20);
-                        particleColor = '#FF69B4';
-                    } else if (item.type === 'ally') {
-                        gameState.allies++;
-                        spawnAllyDrone();
-                        particleColor = '#98FB98';
-                    }
-                    createParticles(item.x, item.y, particleColor, 12);
-                    collectibles.splice(i, 1);
-                }
-            }
-        }
-
-        function spawnAllyDrone() {
-            allyDrones.push({
-                x: player.x + (Math.random() * 60 - 30),
-                y: player.y + (Math.random() * 60 - 30),
-                size: 18,
-                speed: 3,
-                angle: Math.random() * Math.PI * 2,
-                offsetAngle: Math.random() * Math.PI * 2,
-                lastShot: Date.now() + Math.random() * 1500
-            });
-        }
-
-        function updateAllyDrones() {
-            allyDrones.forEach(ally => {
-                ally.offsetAngle += 0.02;
-                const targetX = player.x + Math.cos(ally.offsetAngle) * (60 + gameState.allies * 5);
-                const targetY = player.y + Math.sin(ally.offsetAngle) * (40 + gameState.allies * 5);
-                
-                ally.x += (targetX - ally.x) * 0.08;
-                ally.y += (targetY - ally.y) * 0.08;
-
-                if (Date.now() - ally.lastShot > (1500 - gameState.allies * 100) && enemies.length > 0) {
-                    let nearestEnemy = null;
-                    let minDist = Infinity;
-
-                    enemies.forEach(enemy => {
-                        const dX = enemy.x - ally.x;
-                        const dY = enemy.y - ally.y;
-                        const d = Math.sqrt(dX * dX + dY * dY);
-                        if (d < minDist && d < 250) {
-                            minDist = d;
-                            nearestEnemy = enemy;
-                        }
-                    });
-                    
-                    if (nearestEnemy) {
-                        const dxBullet = nearestEnemy.x - ally.x;
-                        const dyBullet = nearestEnemy.y - ally.y;
-                        bullets.push({
-                            x: ally.x,
-                            y: ally.y,
-                            size: 5,
-                            vx: (dxBullet / minDist) * 6,
-                            vy: (dyBullet / minDist) * 6,
-                            color: '#98FB98',
-                            type: 'ally'
-                        });
-                        ally.lastShot = Date.now();
-                    }
-                }
-            });
-        }
-
-        function createParticles(x, y, color, count = 8) {
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * (Math.random() * 6 + 2),
-                    vy: (Math.random() - 0.5) * (Math.random() * 6 + 2) - 1,
-                    size: Math.random() * 3 + 1.5,
-                    color: color,
-                    life: Math.random() * 30 + 20
-                });
-            }
-        }
-
-        function updateParticles() {
-            for (let i = particles.length - 1; i >= 0; i--) {
-                const p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.vy += 0.1;
-                p.size *= 0.98;
-                
-                if (p.life <= 0 || p.size < 0.5) {
-                    particles.splice(i, 1);
-                }
-            }
-        }
-
-        function spawnNewObjects() {
-            const maxEnemies = 5 + Math.floor(gameState.score / 500);
-            if (Math.random() < (0.01 + gameState.level * 0.002) && enemies.length < maxEnemies) {
-                spawnEnemy();
-            }
-            
-            if (Math.random() < 0.005 && collectibles.length < 10) {
-                spawnCollectible();
-            }
-            
-            if (Math.random() < (0.001 + gameState.level * 0.0005) && collectibles.filter(c => c.type === 'ally').length < (1 + Math.floor(gameState.allies / 2)) ) {
-                if (collectibles.filter(c => c.type === 'ally').length < 3) {
-                    spawnAllyCandidate();
-                }
-            }
-        }
-        
-        function updateUI() {
-            document.getElementById('hp').textContent = Math.max(0, gameState.hp);
-            document.getElementById('score').textContent = gameState.score;
-            document.getElementById('allies').textContent = gameState.allies;
-            document.getElementById('level').textContent = gameState.level;
-
-            if (gameState.score >= gameState.level * 500) {
-                gameState.level++;
-                player.speed += 0.2;
-                createParticles(canvas.width/2, canvas.height/2, '#FFFF00', 50);
-            }
-        }
-
-        function gameOver() {
-            gameState.running = false;
-            cancelAnimationFrame(gameLoopRequestId);
-            gameLoopRequestId = null;
-            
-            // モバイル操作UIを非表示
-            document.getElementById('controls').style.display = 'none';
-
-            setTimeout(() => {
-                alert('ゲームオーバー！ スコア: ' + gameState.score + ' レベル: ' + gameState.level);
-                startScreen.style.display = 'flex';
-            }, 100);
-        }
-
-
-        // --- Draw Functions ---
-        function drawBackground() {
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#87CEEB');
-            gradient.addColorStop(0.6, '#B2FFFF');
-            gradient.addColorStop(1, '#98FB98');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            mountains.forEach(mountain => {
-                ctx.fillStyle = '#A9A9A9';
-                ctx.beginPath();
-                ctx.moveTo(mountain.x, canvas.height);
-                ctx.lineTo(mountain.x + mountain.width / 2, mountain.y);
-                ctx.lineTo(mountain.x + mountain.width, canvas.height);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                const snowHeight = mountain.height * 0.3;
-                ctx.beginPath();
-                ctx.moveTo(mountain.x + mountain.width / 2, mountain.y);
-                ctx.lineTo(mountain.x + mountain.width / 2 - mountain.width * 0.15, mountain.y + snowHeight);
-                ctx.lineTo(mountain.x + mountain.width / 2 + mountain.width * 0.15, mountain.y + snowHeight);
-                ctx.closePath();
-                ctx.fill();
-            });
-
-            buildings.forEach(building => {
-                ctx.fillStyle = '#696969';
-                ctx.fillRect(building.x, building.y, building.width, building.height);
-                
-                ctx.fillStyle = Math.random() > 0.3 ? '#FFFFE0' : '#333333';
-                const windowWidth = building.width / 4;
-                const windowHeight = building.height / 6;
-                for (let r = 0; r < 4; r++) {
-                    for (let c = 0; c < 2; c++) {
-                        if (Math.random() > 0.2) {
-                            ctx.fillRect(
-                                building.x + windowWidth / 2 + c * (windowWidth * 1.5),
-                                building.y + windowHeight / 2 + r * (windowHeight * 1.3),
-                                windowWidth,
-                                windowHeight
-                            );
-                        }
-                    }
-                }
-            });
-
-
-            clouds.forEach(cloud => {
-                cloud.x -= cloud.speed;
-                if (cloud.x < -cloud.size * 2) cloud.x = canvas.width + cloud.size;
-                
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                ctx.beginPath();
-                ctx.arc(cloud.x, cloud.y, cloud.size * 0.6, 0, Math.PI * 2);
-                ctx.arc(cloud.x + cloud.size * 0.4, cloud.y + cloud.size * 0.1, cloud.size * 0.7, 0, Math.PI * 2);
-                ctx.arc(cloud.x - cloud.size * 0.5, cloud.y + cloud.size * 0.2, cloud.size * 0.5, 0, Math.PI * 2);
-                ctx.arc(cloud.x + cloud.size * 0.1, cloud.y - cloud.size * 0.3, cloud.size * 0.6, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.fill();
-            });
-        }
-
-        function drawPlayer() {
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            
-            ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(0, -player.size * 0.7, player.size * 1.2, player.size * 0.3, Date.now()*0.01, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, player.size * 0.8, player.size * 0.6, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#FFC0CB';
-            ctx.beginPath();
-            ctx.ellipse(0, -player.size * 0.1, player.size * 0.5, player.size * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(-player.size * 0.25, -player.size * 0.05, player.size * 0.15, 0, Math.PI * 2);
-            ctx.arc(player.size * 0.25, -player.size * 0.05, player.size * 0.15, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(-player.size * 0.25, -player.size * 0.05, player.size * 0.07, 0, Math.PI * 2);
-            ctx.arc(player.size * 0.25, -player.size * 0.05, player.size * 0.07, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.restore();
-        }
-
-        function drawEnemies() {
-            enemies.forEach(enemy => {
-                ctx.save();
-                ctx.translate(enemy.x, enemy.y);
-                
-                ctx.fillStyle = enemy.color;
-                ctx.beginPath();
-                ctx.moveTo(0, -enemy.size * 0.8);
-                ctx.lineTo(enemy.size * 0.7, 0);
-                ctx.lineTo(0, enemy.size * 0.8);
-                ctx.lineTo(-enemy.size * 0.7, 0);
-                ctx.closePath();
-                ctx.fill();
-
-                ctx.fillStyle = '#FFFF00';
-                ctx.beginPath();
-                ctx.arc(0, 0, enemy.size * 0.3, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'red';
-                ctx.beginPath();
-                ctx.arc(0,0, enemy.size * 0.15, 0, Math.PI*2);
-                ctx.fill();
-
-                ctx.restore();
-            });
-        }
-
-        function drawBullets() {
-            bullets.forEach(bullet => {
-                ctx.fillStyle = bullet.color;
-                ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, bullet.size / 2, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.fillStyle = bullet.type === 'player' ? 'rgba(255, 255, 0, 0.3)' :
-                                 bullet.type === 'ally' ? 'rgba(152, 251, 152, 0.3)' : 'rgba(255, 0, 0, 0.3)';
-                ctx.beginPath();
-                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        }
-
-        function drawCollectibles() {
-            collectibles.forEach(item => {
-                const yOffset = Math.sin(item.bounce) * 5;
-                ctx.save();
-                ctx.translate(item.x, item.y + yOffset);
-                
-                if (item.type === 'star') {
-                    ctx.fillStyle = '#FFD700';
-                    ctx.beginPath();
-                    for (let i = 0; i < 5; i++) {
-                        ctx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * (item.size),
-                                    -Math.sin((18 + i * 72) / 180 * Math.PI) * (item.size));
-                        ctx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * (item.size * 0.5),
-                                    -Math.sin((54 + i * 72) / 180 * Math.PI) * (item.size * 0.5));
-                    }
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (item.type === 'heart') {
-                    ctx.fillStyle = '#FF69B4';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -item.size * 0.3);
-                    ctx.bezierCurveTo(-item.size * 0.7, -item.size * 0.8, -item.size * 1.2, -item.size * 0.2, 0, item.size * 0.6);
-                    ctx.bezierCurveTo(item.size * 1.2, -item.size * 0.2, item.size * 0.7, -item.size * 0.8, 0, -item.size * 0.3);
-                    ctx.closePath();
-                    ctx.fill();
-                } else if (item.type === 'ally') {
-                    // Draw a friendly drone similar to the player, but smaller
-                    ctx.fillStyle = '#98FB98'; // Greenish
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, item.size * 0.8, item.size * 0.6, 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Propeller blur
-                    ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -item.size * 0.7, item.size * 1.2, item.size * 0.3, Date.now()*0.01, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Friendly eyes
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath();
-                    ctx.arc(-item.size * 0.2, 0, item.size * 0.1, 0, Math.PI * 2);
-                    ctx.arc(item.size * 0.2, 0, item.size * 0.1, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = 'blue';
-                    ctx.beginPath();
-                    ctx.arc(-item.size * 0.2, 0, item.size * 0.05, 0, Math.PI * 2);
-                    ctx.arc(item.size * 0.2, 0, item.size * 0.05, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.restore();
-            });
-        }
-
-
-        function drawAllyDrones() {
-            allyDrones.forEach(ally => {
-                ctx.save();
-                ctx.translate(ally.x, ally.y);
-
-                // Propeller blur
-                ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
-                ctx.beginPath();
-                ctx.ellipse(0, -ally.size * 0.7, ally.size * 1.2, ally.size * 0.3, Date.now()*0.01, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Ally Drone Body
-                ctx.fillStyle = '#98FB98'; // Light green
-                ctx.beginPath();
-                ctx.ellipse(0, 0, ally.size * 0.8, ally.size * 0.6, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Ally Drone "Cabin" or Highlight
-                ctx.fillStyle = '#CCFFCC'; // Even lighter green
-                ctx.beginPath();
-                ctx.ellipse(0, -ally.size * 0.1, ally.size * 0.5, ally.size * 0.3, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Eyes
-                ctx.fillStyle = 'white';
-                ctx.beginPath();
-                ctx.arc(-ally.size * 0.25, -ally.size * 0.05, ally.size * 0.15, 0, Math.PI * 2);
-                ctx.arc(ally.size * 0.25, -ally.size * 0.05, ally.size * 0.15, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'blue';
-                ctx.beginPath();
-                ctx.arc(-ally.size * 0.25, -ally.size * 0.05, ally.size * 0.07, 0, Math.PI * 2);
-                ctx.arc(ally.size * 0.25, -ally.size * 0.05, ally.size * 0.07, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.restore();
-            });
-        }
-
-        function drawParticles() {
-            particles.forEach(p => {
-                ctx.fillStyle = `rgba(${parseInt(p.color.slice(1,3), 16)}, ${parseInt(p.color.slice(3,5), 16)}, ${parseInt(p.color.slice(5,7), 16)}, ${p.life / 30})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
-                ctx.fill();
+                damage: 25
             });
         }
 
         function gameLoop() {
-            if (!gameState.running) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
-
-            drawBackground();
-            updatePlayer();
-            updateEnemies();
-            updateBullets();
-            updateCollectibles();
-            updateAllyDrones();
-            updateParticles();
-
-            spawnNewObjects();
-            updateUI();
-
-            drawCollectibles();
-            drawEnemies();
-            drawAllyDrones();
-            drawBullets();
-            drawPlayer();
-            drawParticles();
-
-            gameLoopRequestId = requestAnimationFrame(gameLoop);
+            if (gameRunning) {
+                update();
+                draw();
+            }
+            requestAnimationFrame(gameLoop);
         }
 
-        // 初期状態ではコントロールを非表示にする
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('controls').style.display = 'none';
-        });
-    </script>
-</body>
-</html>
+        function update() {
+            if (!gameRunning) return;
+
+            // プレイヤー移動
+            if (keys['ArrowLeft'] || keys['a']) player.x = Math.max(0, player.x - 5);
+            if (keys['ArrowRight'] || keys['d']) player.x = Math.min(canvas.width - player.width, player.x + 5);
+            if (keys['ArrowUp'] || keys['w']) player.y = Math.max(0, player.y - 5);
+            if (keys['ArrowDown'] || keys['s']) player.y = Math.min(canvas.height - player.height, player.y + 5);
+
+            // 弾丸更新
+            bullets = bullets.filter(bullet => {
+                bullet.y -= bullet.speed;
+                return bullet.y > -bullet.height;
+            });
+
+            enemyBullets = enemyBullets.filter(bullet => {
+                bullet.y += bullet.speed;
+                return bullet.y < canvas.height + bullet.height;
+            });
+
+            // 敵更新
+            enemies.forEach(enemy => {
+                enemy.y += enemy.speed;
+                enemy.shootTimer++;
+
+                if (enemy.shootTimer > 60) {
+                    enemyBullets.push({
+                        x: enemy.x + enemy.width / 2,
+                        y: enemy.y + enemy.height,
+                        width: 4,
+                        height: 8,
+                        speed: 4,
+                        damage: 10
+                    });
+                    enemy.shootTimer = 0;
+                }
+            });
+
+            // 画面外に出た敵を削除し、新しい敵をスポーン
+            enemies = enemies.filter(enemy => {
+                if (enemy.y > canvas.height) {
+                    spawnEnemy();
+                    return false;
+                }
+                return true;
+            });
+
+            // 当たり判定
+            checkCollisions();
+
+            // スコアに応じたレベルアップ
+            if (score > level * 1000) {
+                level++;
+                updateUI();
+
+                // レベルアップ時に仲間追加
+                if (Math.random() < 0.3) {
+                    spawnAlly();
+                }
+            }
+
+            // ステージ進行
+            if (score > stage * 2000 && !bossSpawned) {
+                stage++;
+                spawnBoss();
+            }
+        }
+
+        function spawnBoss() {
+            boss = {
+                x: canvas.width / 2 - 50,
+                y: 50,
+                width: 100,
+                height: 80,
+                hp: 200,
+                maxHp: 200,
+                speed: 2,
+                shootTimer: 0
+            };
+            bossSpawned = true;
+            document.getElementById('bossHealthBar').style.display = 'block';
+            updateBossHealthBar();
+        }
+
+        function updateBossHealthBar() {
+            if (boss) {
+                const healthPercent = (boss.hp / boss.maxHp) * 100;
+                document.getElementById('bossHealthFill').style.width = healthPercent + '%';
+            }
+        }
+
+        function checkCollisions() {
+            // プレイヤーの弾と敵の当たり判定
+            bullets.forEach((bullet, bulletIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (isColliding(bullet, enemy)) {
+                        enemy.hp -= bullet.damage;
+                        bullets.splice(bulletIndex, 1);
+
+                        if (enemy.hp <= 0) {
+                            score += 100;
+                            enemies.splice(enemyIndex, 1);
+                            spawnEnemy();
+                            updateUI();
+                        }
+                    }
+                });
+
+                // ボスとの当たり判定
+                if (boss && isColliding(bullet, boss)) {
+                    boss.hp -= bullet.damage;
+                    bullets.splice(bulletIndex, 1);
+                    updateBossHealthBar();
+
+                    if (boss.hp <= 0) {
+                        score += 1000;
+                        boss = null;
+                        bossSpawned = false;
+                        document.getElementById('bossHealthBar').style.display = 'none';
+                        updateUI();
+                    }
+                }
+            });
+
+            // 敵の弾とプレイヤーの当たり判定
+            enemyBullets.forEach((bullet, bulletIndex) => {
+                if (isColliding(bullet, player)) {
+                    player.hp -= bullet.damage;
+                    enemyBullets.splice(bulletIndex, 1);
+                    updateUI();
+
+                    if (player.hp <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+        }
+
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y;
+        }
+
+        function draw() {
+            if (!gameRunning) return;
+
+            // 背景をクリア
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // プレイヤー描画
+            ctx.fillStyle = '#FF69B4';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // 敵描画
+            ctx.fillStyle = '#FF0000';
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            });
+
+            // ボス描画
+            if (boss) {
+                ctx.fillStyle = '#800080';
+                ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+            }
+
+            // 仲間描画
+            ctx.fillStyle = '#00FF00';
+            allies.forEach(ally => {
+                ctx.fillRect(ally.
